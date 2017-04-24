@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:p="http://www.springframework.org/schema/p" xmlns:context="http://www.springframework.org/schema/context"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd">
+    <context:component-scan base-package="MessageQueueService"></context:component-scan>
+
+    <bean id="targetConnectionFactory" class="org.apache.activemq.ActiveMQConnectionFactory">
+        <property name="brokerURL" value="tcp://localhost:61616"></property>
+    </bean>
+
+    <bean id="pooledConnection" class="org.apache.activemq.pool.PooledConnectionFactory">
+        <property name="connectionFactory" ref="targetConnectionFactory"></property>
+        <property name="maxConnections" value="10"></property>
+    </bean>
+    <!--配置JMS connectionFactory-->
+    <bean id="connectionFactory" class="org.springframework.jms.connection.SingleConnectionFactory">
+        <property name="targetConnectionFactory" ref="targetConnectionFactory"></property>
+    </bean>
+    <!--Spring 提供的工具类,可以用来发送接收JMS-->
+    <bean id="jmsTemplate" class="org.springframework.jms.core.JmsTemplate">
+        <!--Spring提供的连接工厂-->
+        <property name="connectionFactory" ref="connectionFactory"></property>
+    </bean>
+
+    <!--P2P,点对点的队列-->
+    <bean id="queueDestination" class="org.apache.activemq.command.ActiveMQQueue">
+        <constructor-arg>
+            <value>queue</value>
+        </constructor-arg>
+    </bean>
+    <!--Topic, 主题,一对多-->
+    <bean id="topicDestination" class="org.apache.activemq.command.ActiveMQTopic">
+        <constructor-arg>
+            <value>topic</value>
+        </constructor-arg>
+    </bean>
+
+    <!--配置消息监听器-->
+    <bean id="consumerMessageListener" class="MessageQueueService.ConsumerListener"></bean>
+
+    <!--配置消息监听容器-->
+    <bean id="jmsConsumerContainer" class="org.springframework.jms.listener.DefaultMessageListenerContainer">
+        <property name="connectionFactory" ref="connectionFactory"></property>
+        <property name="destination" ref="queueDestination"></property>
+        <property name="messageListener" ref="consumerMessageListener"></property>
+    </bean>
+</beans>
